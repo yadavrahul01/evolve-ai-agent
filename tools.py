@@ -1,6 +1,8 @@
 
 from datetime import datetime
+from Utilities.utilities import log
 import requests
+import json
 
 
 # Function 1: Get current time
@@ -15,7 +17,7 @@ def get_weather(city):
 
         response = requests.get(url, timeout=10)
 
-        response.raise_for_status()
+        response.raise_for_status()  #This will raise the HTTP error if something goes wrong with the request.
 
         return response.text
 
@@ -62,8 +64,13 @@ TOOLS = [
             "description": "Returns the city where user lives. use this when user says 'my city' , 'where i live' or 'my location' without naming the city.",
             "parameters": {
                 "type": "object",
-                "properties": {},
-                "required": []
+                "properties": {
+                    "city" : {
+                        "type": "string",
+                        "description": "Name of the city where user lives.",
+                    }
+                },
+                "required": ["city"]
             } 
         }      
     }
@@ -77,4 +84,17 @@ FUNCTION_NAME_TO_FUNCTION_MAP = {
      "get_user_city": get_user_city
 
 }
-## print("Assistant (raw): "+ str(response))
+
+def run_tool(tool_call):
+     func_name = tool_call.function.name
+    
+     func_args = {}
+     try:
+         func_args= json.loads(tool_call.function.arguments or "{}")
+         log(f"Calling function {func_name} with arguements {func_args}")
+         fn= FUNCTION_NAME_TO_FUNCTION_MAP[func_name]
+         result =fn(**func_args)
+     except Exception as e:
+         result = f"Error executing tool '{func_name}': {e}"
+     log(f"  {result}")
+     result = str(result)

@@ -1,9 +1,13 @@
-
+# standard libraary imports
+import os
+# third party imports
 from openai import OpenAI
 from dotenv import load_dotenv
-from tools import TOOLS, FUNCTION_NAME_TO_FUNCTION_MAP
-import json
-import os
+# local modules
+from tools import TOOLS, run_tool
+from Utilities.utilities import log
+
+
 
 load_dotenv()
 
@@ -53,19 +57,13 @@ while True:
         msg= response.choices[0].message
         if not msg.tool_calls:
             break
+
+        log(f"Step {step+1}: model requested {len(msg.tool_calls)} tool calls.")
+
         messages.append(msg)
 
         for tool_call in msg.tool_calls:
-            func_name = tool_call.function.name
-
-            func_args = {}
-            try:
-                func_args= json.loads(tool_call.function.arguments or "{}")
-
-                fn= FUNCTION_NAME_TO_FUNCTION_MAP[func_name]
-                result =fn(**func_args)
-            except Exception as e:
-                result = f"Error executing tool '{func_name}': {e}"
+            result = run_tool(tool_call)
             messages.append({
                 "role" : "tool",
                 "tool_id" : tool_call.id,
@@ -88,4 +86,4 @@ while True:
 
     })
 
-    print("Assistant: " + msg.content)
+    print("Assistant: " + msg.content or "")
